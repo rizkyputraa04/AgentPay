@@ -1,4 +1,3 @@
-cat > .gitignore << 'EOF'
 # Solana / Anchor
 .anchor/
 target/
@@ -9,12 +8,13 @@ node_modules/
 dist/
 .npm/
 
-# Environment
+# Environment — JANGAN PERNAH upload file ini
 .env
 .env.local
 *.pem
 id.json
 wallet.json
+*keypair*
 
 # OS
 .DS_Store
@@ -26,5 +26,7 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-EOF
+
+# Build artifacts
+*.d.ts
+*.js.map
