@@ -1,4 +1,3 @@
-cat > SECURITY.md << 'EOF'
 # Security Policy
 
 ## Important Notice
@@ -41,4 +40,3 @@ on a responsible disclosure timeline.
 - This codebase has not yet been externally audited
 - Devnet use only until audit is complete
 - Admin-controlled dispute resolution (governance upgrade planned)
-EOF
