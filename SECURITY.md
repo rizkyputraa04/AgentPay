@@ -1,31 +1,44 @@
 cat > SECURITY.md << 'EOF'
 # Security Policy
 
-## Supported Versions
+## Important Notice
 
 AgentPay is currently in development on Solana Devnet.
 Do NOT deploy to Mainnet until a professional security audit is completed.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please do NOT open a public issue.
+If you discover a security vulnerability, please do NOT open a public GitHub issue.
 
-Send a private report to: security@agentpay.network
+Report privately to: security@agentpay.network
 
-Include:
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+Please include:
+- A clear description of the vulnerability
+- Steps to reproduce the issue
+- Potential impact assessment
+- Suggested fix (if available)
 
-We will respond within 48 hours and work with you on a responsible disclosure timeline.
+We will acknowledge your report within 48 hours and work with you
+on a responsible disclosure timeline.
 
 ## Audit Status
 
-- [ ] Trail of Bits / Halborn audit — Planned before Mainnet launch
-- [ ] Bug bounty program — Coming soon
+| Milestone | Status |
+|---|---|
+| Internal code review | 🔨 In Progress |
+| Professional security audit | 📋 Planned before Mainnet |
+| Bug bounty program | 📋 Coming soon |
+
+## Security Design Principles
+
+- PDA-controlled escrow — no private key controls user funds
+- State mutations before transfers — prevents reentrancy attacks
+- Anchor constraint-based authorization — enforced at instruction level
+- Checked arithmetic throughout — prevents integer overflow
 
 ## Known Limitations
 
-This codebase has not yet been audited. Use on Devnet only.
+- This codebase has not yet been externally audited
+- Devnet use only until audit is complete
+- Admin-controlled dispute resolution (governance upgrade planned)
 EOF
