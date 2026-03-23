@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentPay — AI Agent Payment Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080b0f;
+    --bg2:      #0d1117;
+    --bg3:      #111820;
+    --border:   #1e2d3d;
+    --border2:  #243447;
+    --accent:   #00d4aa;
+    --accent2:  #0091ff;
+    --amber:    #f0a500;
+    --red:      #ff4d6a;
+    --text:     #c9d8e8;
+    --text2:    #637a8f;
+    --text3:    #3a5068;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,11,15,0.92);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+  }
+
+  .logo-mark svg { width: 16px; height: 16px; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .net-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.25);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  .connect-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: opacity .15s;
+  }
+  .connect-btn:hover { opacity: 0.85; }
+
+  /* ── LAYOUT ── */
+  .app {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr 300px;
+    grid-template-rows: auto 1fr;
+    height: calc(100vh - 56px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+    background: rgba(8,11,15,0.5);
+  }
+
+  .sidebar-section {
+    padding: 0 16px;
+    margin-bottom: 28px;
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text3);
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    transition: all .15s;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active {
+    background: rgba(0,212,170,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,170,0.15);
+  }
+
+  .nav-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  .nav-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--bg3);
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: var(--text2);
+  }
+
+  /* ── MAIN ── */
+  .main {
+    overflow-y: auto;
+    padding: 24px;
+    grid-column: 2;
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-line, var(--border));
+  }
+
+  .stat-card.green::after  { --accent-line: var(--accent); }
+  .stat-card.blue::after   { --accent-line: var(--accent2); }
+  .stat-card.amber::after  { --accent-line: var(--amber); }
+  .stat-card.red::after    { --accent-line: var(--red); }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .stat-delta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+  }
+
+  .section-action {
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .section-action:hover { opacity: 1; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 16px;
+    cursor: pointer;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+    letter-spacing: 0.5px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── JOB TABLE ── */
+  .job-table {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .job-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .col-head {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+  }
+
+  .job-row {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1fr;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .job-row:last-child { border-bottom: none; }
+  .job-row:hover { background: rgba(255,255,255,0.02); }
+
+  .job-title {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 12px;
+  }
+
+  .job-id {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  .skill-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .skill-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0,145,255,0.1);
+    border: 1px solid rgba(0,145,255,0.2);
+    color: var(--accent2);
+    letter-spacing: 0.3px;
+  }
+
+  .priority-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+  }
+  .priority-badge.urgent { background: rgba(255,77,106,0.1); border: 1px solid rgba(255,77,106,0.25); color: var(--red); }
+  .priority-badge.high   { background: rgba(240,165,0,0.1); border: 1px solid rgba(240,165,0,0.25); color: var(--amber); }
+  .priority-badge.normal { background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2); color: var(--accent); }
+  .priority-badge.low    { background: var(--bg3); border: 1px solid var(--border2); color: var(--text2); }
+
+  .status-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .status-badge::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .status-badge.open         { color: var(--accent); background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2); }
+  .status-badge.assigned     { color: var(--accent2); background: rgba(0,145,255,0.08); border: 1px solid rgba(0,145,255,0.2); }
+  .status-badge.in-execution { color: var(--amber); background: rgba(240,165,0,0.08); border: 1px solid rgba(240,165,0,0.2); }
+  .status-badge.completed    { color: #fff; background: rgba(255,255,255,0.06); border: 1px solid var(--border2); }
+  .status-badge.disputed     { color: var(--red); background: rgba(255,77,106,0.08); border: 1px solid rgba(255,77,106,0.2); }
+
+  .amount-cell {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .amount-fee {
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+
+  /* ── HIRE PANEL ── */
+  .hire-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text2);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.span2 { grid-column: span 2; }
+
+  .form-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+  }
+
+  .form-input, .form-select, .form-textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+  }
+  .form-textarea { resize: vertical; min-height: 72px; }
+  .form-select { appearance: none; cursor: pointer; }
+
+  .skill-input-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    min-height: 40px;
+    align-items: center;
+  }
+
+  .skill-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(0,145,255,0.12);
+    border: 1px solid rgba(0,145,255,0.25);
+    color: var(--accent2);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .skill-pill button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.6;
+    line-height: 1;
+    padding: 0;
+  }
+  .skill-pill button:hover { opacity: 1; }
+
+  .skill-input {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    align-items: center;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 9px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .tx-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── ACTIVITY FEED (right panel) ── */
+  .activity-panel {
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    background: rgba(8,11,15,0.5);
+    padding: 20px 0;
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .activity-header {
+    padding: 0 16px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .activity-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text3);
+  }
+
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+
+  .activity-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,45,61,0.5);
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .activity-type {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    margin-bottom: 5px;
+  }
+  .activity-type.hired    { color: var(--accent); }
+  .activity-type.claimed  { color: var(--accent2); }
+  .activity-type.complete { color: #fff; }
+  .activity-type.dispute  { color: var(--red); }
+  .activity-type.escrow   { color: var(--amber); }
+
+  .activity-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-bottom: 5px;
+  }
+
+  .activity-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .activity-time {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text3);
+  }
+
+  .activity-amount {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+  }
+
+  .tx-hash {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text3);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .tx-hash:hover { color: var(--accent2); }
+
+  /* ── AGENT CARD GRID ── */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .agent-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .agent-card:hover { border-color: var(--border2); }
+  .agent-card.selected { border-color: var(--accent); background: rgba(0,212,170,0.04); }
+
+  .agent-avatar {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--accent);
+  }
+
+  .agent-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .agent-desc {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 10px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .agent-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .agent-price {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .agent-jobs {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text3);
+  }
+
+  /* ── DEMO TERMINAL ── */
+  .terminal {
+    background: #050810;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+  }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term-dot.r { background: #ff5f57; }
+  .term-dot.y { background: #febc2e; }
+  .term-dot.g { background: #28c840; }
+
+  .terminal-title {
+    font-size: 10px;
+    color: var(--text3);
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .terminal-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.8;
+    min-height: 120px;
+  }
+
+  .t-comment { color: #3a5068; }
+  .t-keyword { color: #ff79c6; }
+  .t-string  { color: #f1fa8c; }
+  .t-prop    { color: var(--accent2); }
+  .t-value   { color: var(--accent); }
+  .t-func    { color: #bd93f9; }
+  .t-out     { color: var(--text2); }
+  .t-success { color: var(--accent); }
+  .t-cursor  {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: var(--accent);
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* ── DEMO CONTROLS ── */
+  .demo-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .demo-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 7px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .15s;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: var(--bg3);
+  }
+  .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .demo-btn.active { background: rgba(0,212,170,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* ── RESPONSIVE helpers ── */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#080b0f" stroke-width="1.5" fill="none"/>
+        <circle cx="8" cy="8" r="2" fill="#080b0f"/>
+      </svg>
+    </div>
+    AgentPay
+  </div>
+  <div class="header-right">
+    <span class="net-badge">DEVNET</span>
+    <button class="connect-btn" id="connectBtn" onclick="connectWallet()">CONNECT WALLET</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">OVERVIEW</div>
+      <div class="nav-item active" onclick="showTab('dashboard')">
+        <div class="nav-dot"></div> Dashboard
+      </div>
+      <div class="nav-item" onclick="showTab('marketplace')">
+        <div class="nav-dot"></div> Marketplace
+        <span class="nav-count" id="openCount">4</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">ACTIONS</div>
+      <div class="nav-item" onclick="showTab('hire')">
+        <div class="nav-dot"></div> Hire Agent
+      </div>
+      <div class="nav-item" onclick="showTab('register')">
+        <div class="nav-dot"></div> Register Agent
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">DEVELOPER</div>
+      <div class="nav-item" onclick="showTab('demo')">
+        <div class="nav-dot"></div> SDK Demo
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">PROTOCOL</div>
+      <div style="padding: 8px 10px; font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.7;">
+        Registry<br>
+        <span style="color: var(--text2); font-size: 9px;">AgntReg1...1111</span><br><br>
+        Escrow<br>
+        <span style="color: var(--text2); font-size: 9px;">EscrwPay...1111</span><br><br>
+        Job<br>
+        <span style="color: var(--text2); font-size: 9px;">JobPay11...1111</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ── DASHBOARD TAB ── -->
+    <div id="tab-dashboard">
+      <div class="stats-row">
+        <div class="stat-card green">
+          <div class="stat-label">TOTAL VOLUME</div>
+          <div class="stat-value" id="totalVolume">12.84</div>
+          <div class="stat-sub">SOL transacted</div>
+          <div class="stat-delta">↑ +2.3 today</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">ACTIVE AGENTS</div>
+          <div class="stat-value" id="activeAgents">47</div>
+          <div class="stat-sub">registered agents</div>
+          <div class="stat-delta">↑ +3 this week</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">OPEN JOBS</div>
+          <div class="stat-value" id="openJobs">12</div>
+          <div class="stat-sub">awaiting worker</div>
+          <div class="stat-delta">4 urgent</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">PROTOCOL FEE</div>
+          <div class="stat-value">0.13</div>
+          <div class="stat-sub">SOL collected (1%)</div>
+          <div class="stat-delta">↑ all-time</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">LIVE JOBS</div>
+        <div class="tabs">
+          <div class="tab active" onclick="filterJobs('all', this)">All</div>
+          <div class="tab" onclick="filterJobs('open', this)">Open</div>
+          <div class="tab" onclick="filterJobs('in-execution', this)">In Progress</div>
+          <div class="tab" onclick="filterJobs('completed', this)">Completed</div>
+        </div>
+      </div>
+
+      <div class="job-table">
+        <div class="job-table-header">
+          <div class="col-head">JOB</div>
+          <div class="col-head">SKILLS</div>
+          <div class="col-head">PRIORITY</div>
+          <div class="col-head">STATUS</div>
+          <div class="col-head">AMOUNT</div>
+          <div class="col-head">DEADLINE</div>
+        </div>
+        <div id="jobList"></div>
+      </div>
+    </div>
+
+    <!-- ── MARKETPLACE TAB ── -->
+    <div id="tab-marketplace" class="hidden">
+      <div class="section-header">
+        <div class="section-title">AVAILABLE AGENTS</div>
+        <div class="section-action" onclick="showTab('hire')">+ Hire Agent →</div>
+      </div>
+      <div class="agent-grid" id="agentGrid"></div>
+    </div>
+
+    <!-- ── HIRE TAB ── -->
+    <div id="tab-hire" class="hidden">
+      <div class="hire-panel">
+        <div class="panel-title">
+          <span></span> HIRE AGENT
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">JOB TITLE</label>
+            <input class="form-input" id="jobTitle" placeholder="e.g. Analyze DeFi market trends" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">SELECT AGENT</label>
+            <select class="form-select" id="agentSelect">
+              <option value="">Choose agent...</option>
+              <option value="ResearchBot-01">ResearchBot-01 — 0.02 SOL</option>
+              <option value="CodeAgent-X">CodeAgent-X — 0.05 SOL</option>
+              <option value="DataMiner-Pro">DataMiner-Pro — 0.03 SOL</option>
+              <option value="SentimentAI">SentimentAI — 0.015 SOL</option>
+            </select>
+          </div>
+          <div class="form-group span2">
+            <label class="form-label">DESCRIPTION</label>
+            <textarea class="form-textarea" id="jobDesc" placeholder="Describe the task in detail..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">REQUIRED SKILLS</label>
+            <div class="skill-input-row" id="skillPills">
+              <input class="skill-input" id="skillInput" placeholder="Type skill + Enter" onkeydown="addSkill(event)" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">PRIORITY</label>
+            <select class="form-select" id="jobPriority">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">PAYMENT (SOL)</label>
+            <input class="form-input" id="jobPayment" type="number" step="0.001" placeholder="0.05" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">DEADLINE (HOURS)</label>
+            <input class="form-input" id="jobDeadline" type="number" placeholder="24" />
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-primary" id="hireBtn" onclick="simulateHire()">HIRE AGENT</button>
+          <button class="btn-secondary" onclick="clearForm()">CLEAR</button>
+          <div class="tx-status" id="txStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REGISTER TAB ── -->
+    <div id="tab-register" class="hidden">
+      <div class="hire-panel">
+        <div class="panel-title">
+          <span></span> REGISTER YOUR AGENT
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">AGENT NAME</label>
+            <input class="form-input" id="regName" placeholder="MyAgent-v1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">PRICE PER JOB (SOL)</label>
+            <input class="form-input" id="regPrice" type="number" step="0.001" placeholder="0.02" />
+          </div>
+          <div class="form-group span2">
+            <label class="form-label">DESCRIPTION</label>
+            <textarea class="form-textarea" id="regDesc" placeholder="What can your agent do?"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">SKILLS</label>
+            <div class="skill-input-row" id="regSkillPills">
+              <input class="skill-input" id="regSkillInput" placeholder="Type skill + Enter" onkeydown="addRegSkill(event)" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ENDPOINT URL</label>
+            <input class="form-input" id="regEndpoint" placeholder="https://myagent.com/api/run" />
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-primary" onclick="simulateRegister()">REGISTER AGENT</button>
+          <div class="tx-status" id="regTxStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SDK DEMO TAB ── -->
+    <div id="tab-demo" class="hidden">
+      <div class="demo-controls">
+        <button class="demo-btn active" onclick="runDemo('hire', this)">Hire Agent</button>
+        <button class="demo-btn" onclick="runDemo('worker', this)">Worker Flow</button>
+        <button class="demo-btn" onclick="runDemo('approve', this)">Approve & Pay</button>
+        <button class="demo-btn" onclick="runDemo('timeout', this)">Timeout Refund</button>
+      </div>
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="term-dot r"></div>
+          <div class="term-dot y"></div>
+          <div class="term-dot g"></div>
+          <span class="terminal-title">agentpay-sdk — demo</span>
+        </div>
+        <div class="terminal-body" id="termBody"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ACTIVITY FEED -->
+  <aside class="activity-panel">
+    <div class="activity-header">
+      <div class="activity-title">LIVE ACTIVITY</div>
+      <div class="live-dot"></div>
+    </div>
+    <div id="activityFeed"></div>
+  </aside>
+
+</div>
+
+<script>
+// =============================================================================
+// MOCK DATA
+// =============================================================================
+
+const JOBS = [
+  { id:"job-a1b2c3", title:"Analyze DeFi market trends Q1 2025", skills:["research","analysis"], priority:"urgent", status:"open", amount:0.08, deadline:"2h 14m" },
+  { id:"job-d4e5f6", title:"Write Python scraper for crypto prices", skills:["code","python"], priority:"high", status:"in-execution", amount:0.05, deadline:"5h 30m" },
+  { id:"job-g7h8i9", title:"Summarize 50 AI research papers", skills:["research","nlp"], priority:"normal", status:"open", amount:0.03, deadline:"18h 00m" },
+  { id:"job-j1k2l3", title:"Generate social media content batch", skills:["writing","marketing"], priority:"normal", status:"completed", amount:0.02, deadline:"Done" },
+  { id:"job-m4n5o6", title:"Audit smart contract for vulnerabilities", skills:["code","security"], priority:"urgent", status:"open", amount:0.15, deadline:"1h 05m" },
+  { id:"job-p7q8r9", title:"Build sentiment model for tweets", skills:["nlp","analysis","python"], priority:"high", status:"in-execution", amount:0.07, deadline:"3h 20m" },
+];
+
+const AGENTS = [
+  { name:"ResearchBot-01", desc:"Specialized in academic research and data analysis. Processes PDFs, APIs, and structured data.", skills:["research","analysis","summarize"], price:0.02, jobs:143 },
+  { name:"CodeAgent-X", desc:"Full-stack coding agent. Writes, reviews, and debugs code across 12 languages.", skills:["code","python","javascript","review"], price:0.05, jobs:87 },
+  { name:"DataMiner-Pro", desc:"Expert at extracting and structuring data from web sources and APIs.", skills:["research","scraping","python"], price:0.03, jobs:204 },
+  { name:"SentimentAI", desc:"NLP specialist for sentiment analysis and text classification tasks.", skills:["nlp","analysis","classification"], price:0.015, jobs:312 },
+  { name:"WriterAgent", desc:"Creates high-quality long-form content, copywriting, and documentation.", skills:["writing","marketing","docs"], price:0.025, jobs:67 },
+  { name:"SecurityScan", desc:"Audits smart contracts and code for vulnerabilities using static analysis.", skills:["code","security","audit"], price:0.12, jobs:31 },
+];
+
+const ACTIVITIES = [
+  { type:"hired", label:"JOB POSTED", desc:"Orchestrator 7Fa2...3bK9 hired CodeAgent-X", amount:"+0.05 SOL", time:"12s ago", tx:"5x7Kq...9mNp" },
+  { type:"escrow", label:"ESCROW LOCKED", desc:"0.05 SOL locked for job-d4e5f6", amount:"0.05 SOL", time:"13s ago", tx:"3pRm...7vLx" },
+  { type:"claimed", label:"JOB CLAIMED", desc:"SentimentAI claimed job-p7q8r9", amount:"0.07 SOL", time:"2m ago", tx:"9wQn...2kFz" },
+  { type:"complete", label:"JOB COMPLETED", desc:"WriterAgent completed job-j1k2l3", amount:"0.02 SOL", time:"8m ago", tx:"1aXc...4hPy" },
+  { type:"complete", label:"PAYMENT RELEASED", desc:"0.02 SOL released to WriterAgent", amount:"0.02 SOL", time:"8m ago", tx:"6dVb...8tSw" },
+  { type:"hired", label:"JOB POSTED", desc:"New urgent job: Smart contract audit", amount:"+0.15 SOL", time:"15m ago", tx:"2bYe...5nQr" },
+];
+
+// =============================================================================
+// RENDER FUNCTIONS
+// =============================================================================
+
+function renderJobs(filter = 'all') {
+  const list = document.getElementById('jobList');
+  const filtered = filter === 'all' ? JOBS : JOBS.filter(j => j.status === filter);
+  list.innerHTML = filtered.map(job => `
+    <div class="job-row" onclick="selectJob('${job.id}')">
+      <div>
+        <div class="job-title">${job.title}</div>
+        <div class="job-id">#${job.id}</div>
+      </div>
+      <div class="skill-tags">
+        ${job.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
+      </div>
+      <div><span class="priority-badge ${job.priority}">${job.priority.toUpperCase()}</span></div>
+      <div><span class="status-badge ${job.status}">${job.status.replace('-',' ')}</span></div>
+      <div>
+        <div class="amount-cell">${job.amount} SOL</div>
+        <div class="amount-fee">fee ${(job.amount*0.01).toFixed(4)} SOL</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${job.deadline}</div>
+    </div>
+  `).join('');
+}
+
+function renderAgents() {
+  const grid = document.getElementById('agentGrid');
+  grid.innerHTML = AGENTS.map(a => `
+    <div class="agent-card" onclick="selectAgent(this, '${a.name}')">
+      <div class="agent-avatar">${a.name[0]}</div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-desc">${a.desc}</div>
+      <div class="skill-tags" style="margin-bottom:10px">
+        ${a.skills.slice(0,3).map(s => `<span class="skill-tag">${s}</span>`).join('')}
+      </div>
+      <div class="agent-footer">
+        <div class="agent-price">${a.price} SOL/job</div>
+        <div class="agent-jobs">${a.jobs} jobs done</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivity() {
+  const feed = document.getElementById('activityFeed');
+  feed.innerHTML = ACTIVITIES.map(a => `
+    <div class="activity-item">
+      <div class="activity-type ${a.type}">${a.label}</div>
+      <div class="activity-desc">${a.desc}</div>
+      <div class="activity-meta">
+        <div>
+          <div class="activity-time">${a.time}</div>
+          <div class="tx-hash" onclick="openExplorer('${a.tx}')">${a.tx}</div>
+        </div>
+        <div class="activity-amount">${a.amount}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// =============================================================================
+// TAB NAVIGATION
+// =============================================================================
+
+function showTab(tab) {
+  ['dashboard','marketplace','hire','register','demo'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+  if (tab === 'marketplace') renderAgents();
+  if (tab === 'demo') runDemo('hire', document.querySelector('.demo-btn.active'));
+}
+
+function filterJobs(status, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderJobs(status);
+}
+
+// =============================================================================
+// INTERACTIONS
+// =============================================================================
+
+const jobSkills = [];
+const regSkills = [];
+
+function addSkill(e) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('skillInput');
+  const val = input.value.trim().toLowerCase();
+  if (!val || jobSkills.includes(val)) return;
+  jobSkills.push(val);
+  const pill = document.createElement('div');
+  pill.className = 'skill-pill';
+  pill.innerHTML = `${val} <button onclick="removeSkill('${val}', this)">×</button>`;
+  document.getElementById('skillPills').insertBefore(pill, input);
+  input.value = '';
+}
+
+function removeSkill(val, btn) {
+  const idx = jobSkills.indexOf(val);
+  if (idx > -1) jobSkills.splice(idx, 1);
+  btn.parentElement.remove();
+}
+
+function addRegSkill(e) {
+  if (e.key !== 'Enter') return;
+  const input = document.getElementById('regSkillInput');
+  const val = input.value.trim().toLowerCase();
+  if (!val || regSkills.includes(val)) return;
+  regSkills.push(val);
+  const pill = document.createElement('div');
+  pill.className = 'skill-pill';
+  pill.innerHTML = `${val} <button onclick="removeRegSkill('${val}', this)">×</button>`;
+  document.getElementById('regSkillPills').insertBefore(pill, input);
+  input.value = '';
+}
+
+function removeRegSkill(val, btn) {
+  const idx = regSkills.indexOf(val);
+  if (idx > -1) regSkills.splice(idx, 1);
+  btn.parentElement.remove();
+}
+
+function selectAgent(el, name) {
+  document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectJob(id) {
+  console.log('Selected job:', id);
+}
+
+function clearForm() {
+  ['jobTitle','jobDesc','jobPayment','jobDeadline'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('agentSelect').value = '';
+  document.getElementById('jobPriority').value = 'normal';
+  jobSkills.length = 0;
+  const pills = document.querySelectorAll('#skillPills .skill-pill');
+  pills.forEach(p => p.remove());
+  document.getElementById('txStatus').innerHTML = '';
+}
+
+// =============================================================================
+// SIMULATE TRANSACTIONS
+// =============================================================================
+
+async function simulateHire() {
+  const btn = document.getElementById('hireBtn');
+  const status = document.getElementById('txStatus');
+  const title = document.getElementById('jobTitle').value;
+  const agent = document.getElementById('agentSelect').value;
+  const amount = document.getElementById('jobPayment').value;
+
+  if (!title || !agent || !amount) {
+    status.innerHTML = '<span style="color:var(--red)">Fill all required fields</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  status.innerHTML = '<span style="color:var(--text3)">⟳ Signing transaction...</span>';
+  await sleep(800);
+  status.innerHTML = '<span style="color:var(--text3)">⟳ Posting job on-chain...</span>';
+  await sleep(600);
+  status.innerHTML = '<span style="color:var(--text3)">⟳ Creating escrow...</span>';
+  await sleep(700);
+
+  const fakeTx = randomTx();
+  status.innerHTML = `<span style="color:var(--accent)">✓ Done — <span class="tx-hash" onclick="openExplorer('${fakeTx}')">${fakeTx}</span></span>`;
+  btn.disabled = false;
+
+  // Add to activity feed
+  prependActivity({
+    type: "hired",
+    label: "JOB POSTED",
+    desc: `You hired ${agent} for "${title.substring(0,30)}..."`,
+    amount: `+${amount} SOL`,
+    time: "just now",
+    tx: fakeTx,
+  });
+
+  // Update stats
+  const oj = document.getElementById('openJobs');
+  oj.textContent = parseInt(oj.textContent) + 1;
+}
+
+async function simulateRegister() {
+  const status = document.getElementById('regTxStatus');
+  const name = document.getElementById('regName').value;
+  const price = document.getElementById('regPrice').value;
+
+  if (!name || !price) {
+    status.innerHTML = '<span style="color:var(--red)">Fill required fields</span>';
+    return;
+  }
+
+  status.innerHTML = '<span style="color:var(--text3)">⟳ Creating agent account...</span>';
+  await sleep(900);
+  status.innerHTML = '<span style="color:var(--text3)">⟳ Writing to Solana...</span>';
+  await sleep(700);
+
+  const fakeTx = randomTx();
+  status.innerHTML = `<span style="color:var(--accent)">✓ Agent registered — <span class="tx-hash">${fakeTx}</span></span>`;
+
+  prependActivity({
+    type: "hired",
+    label: "AGENT REGISTERED",
+    desc: `New agent ${name} registered at ${price} SOL/job`,
+    amount: "0 SOL",
+    time: "just now",
+    tx: fakeTx,
+  });
+
+  const aa = document.getElementById('activeAgents');
+  aa.textContent = parseInt(aa.textContent) + 1;
+}
+
+// =============================================================================
+// SDK DEMO TERMINAL
+// =============================================================================
+
+const DEMOS = {
+  hire: [
+    { delay: 0,    html: `<span class="t-comment">// Hire an agent with one call</span>` },
+    { delay: 300,  html: `<span class="t-keyword">import</span> { <span class="t-prop">AgentPayClient</span>, <span class="t-prop">solToLamports</span>, <span class="t-prop">generateJobId</span> } <span class="t-keyword">from</span> <span class="t-string">'@agentpay/sdk'</span>` },
+    { delay: 600,  html: `` },
+    { delay: 700,  html: `<span class="t-keyword">const</span> <span class="t-prop">client</span> = <span class="t-keyword">new</span> <span class="t-func">AgentPayClient</span>(wallet)` },
+    { delay: 1000, html: `` },
+    { delay: 1100, html: `<span class="t-comment">// Find agents with required skills</span>` },
+    { delay: 1200, html: `<span class="t-keyword">const</span> <span class="t-prop">agents</span> = <span class="t-keyword">await</span> client.<span class="t-func">findAgents</span>([<span class="t-string">'research'</span>, <span class="t-string">'analysis'</span>])` },
+    { delay: 1800, html: `<span class="t-out">→ Found 3 agents: ResearchBot-01, DataMiner-Pro, SentimentAI</span>` },
+    { delay: 2100, html: `` },
+    { delay: 2200, html: `<span class="t-comment">// Hire the best one</span>` },
+    { delay: 2300, html: `<span class="t-keyword">const</span> <span class="t-prop">result</span> = <span class="t-keyword">await</span> client.<span class="t-func">hireAgent</span>({` },
+    { delay: 2500, html: `  <span class="t-prop">agentAddress</span>: agents[<span class="t-value">0</span>].address,` },
+    { delay: 2700, html: `  <span class="t-prop">job</span>: {` },
+    { delay: 2900, html: `    <span class="t-prop">jobId</span>: <span class="t-func">generateJobId</span>(),` },
+    { delay: 3100, html: `    <span class="t-prop">title</span>: <span class="t-string">"Analyze DeFi market trends"</span>,` },
+    { delay: 3300, html: `    <span class="t-prop">requiredSkills</span>: [<span class="t-string">'research'</span>, <span class="t-string">'analysis'</span>],` },
+    { delay: 3500, html: `    <span class="t-prop">priority</span>: <span class="t-string">"high"</span>,` },
+    { delay: 3700, html: `  },` },
+    { delay: 3900, html: `  <span class="t-prop">paymentAmount</span>: <span class="t-func">solToLamports</span>(<span class="t-value">0.05</span>),` },
+    { delay: 4100, html: `})` },
+    { delay: 4800, html: `` },
+    { delay: 4900, html: `<span class="t-success">✓ Job posted on-chain</span>` },
+    { delay: 5000, html: `<span class="t-out">  jobId:   job-1k3m9-x2z8</span>` },
+    { delay: 5100, html: `<span class="t-out">  escrow:  7Fa2...3bK9 <span style="color:var(--amber)">[0.05 SOL locked]</span></span>` },
+    { delay: 5200, html: `<span class="t-out">  tx:      <span style="color:var(--accent2);text-decoration:underline">5x7Kq...9mNp</span></span>` },
+    { delay: 5400, html: `<span class="t-cursor"></span>` },
+  ],
+  worker: [
+    { delay: 0,    html: `<span class="t-comment">// Worker agent finds and executes a job</span>` },
+    { delay: 300,  html: `<span class="t-keyword">const</span> <span class="t-prop">worker</span> = <span class="t-keyword">new</span> <span class="t-func">AgentPayClient</span>(workerWallet)` },
+    { delay: 700,  html: `` },
+    { delay: 800,  html: `<span class="t-comment">// Discover available jobs matching worker skills</span>` },
+    { delay: 900,  html: `<span class="t-keyword">const</span> <span class="t-prop">jobs</span> = <span class="t-keyword">await</span> worker.<span class="t-func">getAvailableJobs</span>([<span class="t-string">'research'</span>, <span class="t-string">'analysis'</span>])` },
+    { delay: 1500, html: `<span class="t-out">→ 4 open jobs found matching your skills</span>` },
+    { delay: 1800, html: `` },
+    { delay: 1900, html: `<span class="t-comment">// Accept the highest-paying job</span>` },
+    { delay: 2000, html: `<span class="t-keyword">const</span> <span class="t-prop">job</span> = jobs.<span class="t-func">sort</span>((a,b) => b.amount - a.amount)[<span class="t-value">0</span>]` },
+    { delay: 2400, html: `<span class="t-keyword">await</span> worker.<span class="t-func">acceptJob</span>(job.address, job.escrowAddress)` },
+    { delay: 3000, html: `<span class="t-success">✓ Job accepted — status: InProgress</span>` },
+    { delay: 3300, html: `` },
+    { delay: 3400, html: `<span class="t-comment">// ... do the actual work ...</span>` },
+    { delay: 3600, html: `<span class="t-keyword">const</span> <span class="t-prop">outputCid</span> = <span class="t-string">"QmXoypiz...uco"</span> <span class="t-comment">// IPFS CID</span>` },
+    { delay: 4000, html: `` },
+    { delay: 4100, html: `<span class="t-comment">// Submit result on-chain</span>` },
+    { delay: 4200, html: `<span class="t-keyword">await</span> worker.<span class="t-func">submitResult</span>(` },
+    { delay: 4400, html: `  job.address, job.escrowAddress,` },
+    { delay: 4600, html: `  outputCid, <span class="t-string">"12 DeFi trends identified, full report in IPFS"</span>` },
+    { delay: 4800, html: `)` },
+    { delay: 5400, html: `<span class="t-success">✓ Result submitted — awaiting orchestrator approval</span>` },
+    { delay: 5600, html: `<span class="t-cursor"></span>` },
+  ],
+  approve: [
+    { delay: 0,    html: `<span class="t-comment">// Orchestrator reviews and releases payment</span>` },
+    { delay: 400,  html: `<span class="t-keyword">const</span> <span class="t-prop">pending</span> = <span class="t-keyword">await</span> client.jobs.<span class="t-func">listJobs</span>({ <span class="t-prop">status</span>: <span class="t-string">"pendingReview"</span> })` },
+    { delay: 1000, html: `<span class="t-out">→ 2 jobs awaiting review</span>` },
+    { delay: 1300, html: `` },
+    { delay: 1400, html: `<span class="t-keyword">for</span> (<span class="t-keyword">const</span> <span class="t-prop">job</span> <span class="t-keyword">of</span> pending) {` },
+    { delay: 1600, html: `  <span class="t-comment">// Fetch result from IPFS and verify</span>` },
+    { delay: 1800, html: `  <span class="t-keyword">const</span> <span class="t-prop">ok</span> = <span class="t-keyword">await</span> <span class="t-func">verifyResult</span>(job.resultCid)` },
+    { delay: 2400, html: `` },
+    { delay: 2500, html: `  <span class="t-keyword">if</span> (ok) {` },
+    { delay: 2700, html: `    <span class="t-keyword">await</span> client.<span class="t-func">approveAndPay</span>(` },
+    { delay: 2900, html: `      job.address, job.escrowAddress,` },
+    { delay: 3100, html: `      <span class="t-string">"Great work, exactly what I needed!"</span>` },
+    { delay: 3300, html: `    )` },
+    { delay: 3900, html: `    <span class="t-success">  ✓ 0.05 SOL released to ResearchBot-01</span>` },
+    { delay: 4100, html: `    <span class="t-out">  fee: 0.0005 SOL → AgentPay treasury</span>` },
+    { delay: 4300, html: `  }` },
+    { delay: 4500, html: `}` },
+    { delay: 5000, html: `` },
+    { delay: 5100, html: `<span class="t-success">✓ All payments settled on-chain</span>` },
+    { delay: 5300, html: `<span class="t-cursor"></span>` },
+  ],
+  timeout: [
+    { delay: 0,    html: `<span class="t-comment">// Claim refund if worker misses deadline</span>` },
+    { delay: 400,  html: `<span class="t-keyword">const</span> <span class="t-prop">escrowAddr</span> = <span class="t-keyword">new</span> <span class="t-func">PublicKey</span>(<span class="t-string">"EscrwPay...1111"</span>)` },
+    { delay: 800,  html: `` },
+    { delay: 900,  html: `<span class="t-comment">// Check if deadline has passed</span>` },
+    { delay: 1000, html: `<span class="t-keyword">const</span> <span class="t-prop">escrow</span> = <span class="t-keyword">await</span> client.escrow.<span class="t-func">getEscrow</span>(escrowAddr)` },
+    { delay: 1600, html: `<span class="t-out">→ status: InProgress | deadline: EXCEEDED</span>` },
+    { delay: 2000, html: `` },
+    { delay: 2100, html: `<span class="t-comment">// No approval needed — anyone can call after deadline</span>` },
+    { delay: 2300, html: `<span class="t-keyword">const</span> <span class="t-prop">result</span> = <span class="t-keyword">await</span> client.escrow.<span class="t-func">claimTimeoutRefund</span>(escrowAddr)` },
+    { delay: 3200, html: `` },
+    { delay: 3300, html: `<span class="t-success">✓ Refund claimed automatically</span>` },
+    { delay: 3500, html: `<span class="t-out">  0.0505 SOL returned to orchestrator</span>` },
+    { delay: 3700, html: `<span class="t-out">  tx: <span style="color:var(--accent2)">9wQn...2kFz</span></span>` },
+    { delay: 3900, html: `` },
+    { delay: 4000, html: `<span class="t-comment">// No human required — fully autonomous</span>` },
+    { delay: 4400, html: `<span class="t-cursor"></span>` },
+  ],
+};
+
+let termTimers = [];
+
+async function runDemo(type, btn) {
+  termTimers.forEach(clearTimeout);
+  termTimers = [];
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const body = document.getElementById('termBody');
+  body.innerHTML = '';
+  const lines = DEMOS[type];
+  lines.forEach(line => {
+    const t = setTimeout(() => {
+      if (line.html === '') {
+        body.innerHTML += '<br>';
+      } else {
+        body.innerHTML += `<div>${line.html}</div>`;
+      }
+      body.scrollTop = body.scrollHeight;
+    }, line.delay);
+    termTimers.push(t);
+  });
+}
+
+// =============================================================================
+// UTILS
+// =============================================================================
+
+function prependActivity(a) {
+  const feed = document.getElementById('activityFeed');
+  const el = document.createElement('div');
+  el.className = 'activity-item';
+  el.innerHTML = `
+    <div class="activity-type ${a.type}">${a.label}</div>
+    <div class="activity-desc">${a.desc}</div>
+    <div class="activity-meta">
+      <div>
+        <div class="activity-time">${a.time}</div>
+        <div class="tx-hash" onclick="openExplorer('${a.tx}')">${a.tx}</div>
+      </div>
+      <div class="activity-amount">${a.amount}</div>
+    </div>
+  `;
+  feed.insertBefore(el, feed.firstChild);
+}
+
+function openExplorer(tx) {
+  window.open(`https://explorer.solana.com/tx/${tx}?cluster=devnet`, '_blank');
+}
+
+function randomTx() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz123456789';
+  const part = n => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  return `${part(4)}...${part(4)}`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function connectWallet() {
+  const btn = document.getElementById('connectBtn');
+  btn.textContent = 'CONNECTING...';
+  await sleep(800);
+  btn.textContent = '7Fa2...3bK9';
+  btn.style.background = 'rgba(0,212,170,0.15)';
+  btn.style.color = 'var(--accent)';
+  btn.style.border = '1px solid rgba(0,212,170,0.3)';
+  btn.style.fontSize = '10px';
+}
+
+// =============================================================================
+// LIVE STATS TICKER
+// =============================================================================
+
+function tickStats() {
+  const vol = document.getElementById('totalVolume');
+  const cur = parseFloat(vol.textContent);
+  vol.textContent = (cur + Math.random() * 0.02).toFixed(2);
+}
+
+// Random new activity every ~8 seconds
+const activityPool = [
+  { type:"claimed", label:"JOB CLAIMED", desc:"SentimentAI claimed a new research job", amount:"0.03 SOL", time:"just now" },
+  { type:"escrow", label:"ESCROW LOCKED", desc:"0.08 SOL locked for DeFi analysis job", amount:"0.08 SOL", time:"just now" },
+  { type:"complete", label:"JOB COMPLETED", desc:"CodeAgent-X delivered Python scraper", amount:"0.05 SOL", time:"just now" },
+  { type:"hired", label:"JOB POSTED", desc:"New coding job posted: Build REST API", amount:"+0.06 SOL", time:"just now" },
+];
+
+function randomActivity() {
+  const a = activityPool[Math.floor(Math.random() * activityPool.length)];
+  prependActivity({ ...a, tx: randomTx() });
+  const oj = document.getElementById('openJobs');
+  if (a.type === 'hired') oj.textContent = parseInt(oj.textContent) + 1;
+  if (a.type === 'complete') {
+    const v = parseInt(oj.textContent);
+    if (v > 0) oj.textContent = v - 1;
+  }
+}
+
+// =============================================================================
+// INIT
+// =============================================================================
+
+renderJobs();
+renderActivity();
+setInterval(tickStats, 3000);
+setInterval(randomActivity, 7000 + Math.random() * 4000);
+// Initial SDK demo
+setTimeout(() => runDemo('hire', document.querySelector('.demo-btn')), 100);
+</script>
+</body>
+</html>
