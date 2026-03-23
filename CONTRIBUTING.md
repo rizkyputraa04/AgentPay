@@ -37,7 +37,4 @@ Example: `feat: add dispute resolution to escrow contract`
 2. Update documentation if needed
 3. Reference any related issues in your PR description
 
-## Questions?
-
-Open an issue or reach out at contact@agentpay.network
 EOF
