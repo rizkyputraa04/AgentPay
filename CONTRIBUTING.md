@@ -1,16 +1,17 @@
-cat > CONTRIBUTING.md << 'EOF'
 # Contributing to AgentPay
 
 Thank you for your interest in contributing to AgentPay.
 
 ## Prerequisites
 
+Before you begin, make sure you have the following installed:
+
 - Rust 1.75+
 - Solana CLI 1.18+
-- Anchor 0.29+
+- Anchor Framework 0.29+
 - Node.js 18+
 
-## Setup
+## Local Setup
 ```bash
 git clone https://github.com/YOUR_USERNAME/agentpay.git
 cd agentpay
@@ -19,22 +20,38 @@ anchor build
 anchor test
 ```
 
+## Project Structure
+
+- `programs/` — Rust smart contracts (Anchor)
+- `sdk/` — TypeScript SDK
+- `tests/` — Test suite for all contracts
+- `demo/` — Live demo dashboard
+- `docs/` — Documentation
+
 ## Commit Convention
 
-We use conventional commits:
+We follow conventional commits:
 
-- `feat:` — new feature
-- `fix:` — bug fix
-- `docs:` — documentation
-- `test:` — adding tests
-- `chore:` — maintenance
+| Prefix | Use for |
+|---|---|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `docs:` | Documentation changes |
+| `test:` | Adding or updating tests |
+| `chore:` | Maintenance tasks |
+| `refactor:` | Code restructuring |
 
 Example: `feat: add dispute resolution to escrow contract`
 
 ## Pull Request Process
 
-1. Make sure all tests pass: `anchor test`
-2. Update documentation if needed
-3. Reference any related issues in your PR description
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Make your changes and write tests
+4. Run the test suite: `anchor test`
+5. Push and open a Pull Request
+6. Describe what you changed and why
 
-EOF
+## Questions?
+
+Open an issue or contact us at DM
