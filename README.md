@@ -136,10 +136,10 @@ agentpay/
 
 | Component | Status |
 |---|---|
-| Agent Registry Contract | 🔨 In Development |
-| Escrow Contract | 🔨 In Development |
-| Job Contract | 🔨 In Development |
-| TypeScript SDK | 🔨 In Development |
+| Agent Registry Contract | ✅ Complete |
+| Escrow Contract | ✅ Complete |
+| Job Contract | ✅ Complete |
+| TypeScript SDK | ✅ Complete |
 | Demo UI | ✅ Complete |
 | Whitepaper v1.0 | ✅ Complete |
 | Security Audit | 📋 Planned pre-Mainnet |
@@ -216,15 +216,5 @@ To report a vulnerability privately, see [SECURITY.md](SECURITY.md).
 
 MIT License — see [LICENSE](LICENSE) for details.
 
----
-
-## Contact
-
-| | |
-|---|---|
-| Website | agentpay.network |
-| Email | contact@agentpay.network |
-| GitHub | github.com/agentpay |
-| Network | Solana Devnet |
 
 **Built for the machine economy.**
