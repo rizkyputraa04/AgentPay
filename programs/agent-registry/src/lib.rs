@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Fpp4D9vgStYwnwoukyFG38n3ZF18pS6kfBbdUdKAxw9h");
+declare_id!("EBkQMQutinEtG1BzQMrB2zQDsEEsu7oQLyDzLAgGfWM7");
 
 #[program]
-pub mod agentpay_contracts {
+pub mod agent_registry {
     use super::*;
 
-    // ============================================================
-    // AGENT REGISTRY
-    // ============================================================
-
+    /// Mendaftarkan agent baru ke registry AgentPay.
+    /// Siapapun bisa mendaftarkan agent selama mereka punya wallet Solana.
     pub fn register_agent(
         ctx: Context<RegisterAgent>,
         name: String,
@@ -18,6 +16,7 @@ pub mod agentpay_contracts {
         price_per_job: u64,
         endpoint_url: String,
     ) -> Result<()> {
+        // Validasi panjang input supaya tidak overflow account storage
         require!(name.len() <= 50, AgentPayError::NameTooLong);
         require!(description.len() <= 200, AgentPayError::DescriptionTooLong);
         require!(skills.len() <= 10, AgentPayError::TooManySkills);
@@ -36,11 +35,20 @@ pub mod agentpay_contracts {
         agent.is_active = true;
         agent.jobs_completed = 0;
         agent.created_at = clock.unix_timestamp;
+        agent.updated_at = clock.unix_timestamp;
         agent.bump = ctx.bumps.agent_account;
+
+        emit!(AgentRegistered {
+            owner: agent.owner,
+            name: agent.name.clone(),
+            price_per_job: agent.price_per_job,
+        });
 
         Ok(())
     }
 
+    /// Update informasi agent yang sudah terdaftar.
+    /// Hanya owner agent yang bisa memanggil instruksi ini.
     pub fn update_agent(
         ctx: Context<UpdateAgent>,
         description: Option<String>,
@@ -49,273 +57,113 @@ pub mod agentpay_contracts {
         endpoint_url: Option<String>,
     ) -> Result<()> {
         let agent = &mut ctx.accounts.agent_account;
+        let clock = Clock::get()?;
 
         if let Some(desc) = description {
             require!(desc.len() <= 200, AgentPayError::DescriptionTooLong);
             agent.description = desc;
         }
+
         if let Some(s) = skills {
             require!(s.len() <= 10, AgentPayError::TooManySkills);
             agent.skills = s;
         }
+
         if let Some(price) = price_per_job {
             require!(price > 0, AgentPayError::PriceMustBePositive);
             agent.price_per_job = price;
         }
+
         if let Some(url) = endpoint_url {
             require!(url.len() <= 100, AgentPayError::UrlTooLong);
             agent.endpoint_url = url;
         }
 
+        agent.updated_at = clock.unix_timestamp;
+
         Ok(())
     }
 
+    /// Menonaktifkan agent dari registry.
+    /// Agent yang nonaktif tidak bisa di-hire sampai diaktifkan kembali.
     pub fn deactivate_agent(ctx: Context<UpdateAgent>) -> Result<()> {
-        ctx.accounts.agent_account.is_active = false;
+        let agent = &mut ctx.accounts.agent_account;
+        agent.is_active = false;
+        agent.updated_at = Clock::get()?.unix_timestamp;
         Ok(())
     }
 
+    /// Mengaktifkan kembali agent yang sebelumnya nonaktif.
     pub fn reactivate_agent(ctx: Context<UpdateAgent>) -> Result<()> {
-        ctx.accounts.agent_account.is_active = true;
-        Ok(())
-    }
-
-    // ============================================================
-    // ESCROW CONTRACT
-    // ============================================================
-
-    pub fn create_escrow(
-        ctx: Context<CreateEscrow>,
-        job_id: String,
-        amount: u64,
-        job_description: String,
-    ) -> Result<()> {
-        require!(job_id.len() <= 32, AgentPayError::JobIdTooLong);
-        require!(job_description.len() <= 200, AgentPayError::DescriptionTooLong);
-        require!(amount > 0, AgentPayError::AmountMustBePositive);
-
-        let protocol_fee = amount
-            .checked_mul(100)
-            .ok_or(AgentPayError::MathOverflow)?
-            .checked_div(10_000)
-            .ok_or(AgentPayError::MathOverflow)?;
-
-        let total = amount
-            .checked_add(protocol_fee)
-            .ok_or(AgentPayError::MathOverflow)?;
-
-        anchor_lang::system_program::transfer(
-            CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: ctx.accounts.orchestrator.to_account_info(),
-                    to: ctx.accounts.escrow_account.to_account_info(),
-                },
-            ),
-            total,
-        )?;
-
-        let escrow = &mut ctx.accounts.escrow_account;
-        let clock = Clock::get()?;
-
-        escrow.orchestrator = ctx.accounts.orchestrator.key();
-        escrow.worker = ctx.accounts.worker.key();
-        escrow.job_id = job_id;
-        escrow.job_description = job_description;
-        escrow.amount = amount;
-        escrow.protocol_fee = protocol_fee;
-        escrow.status = EscrowStatus::Funded;
-        escrow.created_at = clock.unix_timestamp;
-        escrow.deadline = clock.unix_timestamp + 86_400;
-        escrow.bump = ctx.bumps.escrow_account;
-
-        Ok(())
-    }
-
-    pub fn approve_and_release(ctx: Context<OrchestratorAction>) -> Result<()> {
-        let escrow = &mut ctx.accounts.escrow_account;
-
-        require!(
-            escrow.status == EscrowStatus::Funded,
-            AgentPayError::InvalidStatus
-        );
-
-        let amount = escrow.amount;
-        let protocol_fee = escrow.protocol_fee;
-
-        escrow.status = EscrowStatus::Completed;
-
-        let escrow_info = ctx.accounts.escrow_account.to_account_info();
-        let worker_info = ctx.accounts.worker.to_account_info();
-        let orchestrator_info = ctx.accounts.orchestrator.to_account_info();
-
-        **escrow_info.try_borrow_mut_lamports()? -= amount + protocol_fee;
-        **worker_info.try_borrow_mut_lamports()? += amount;
-        **orchestrator_info.try_borrow_mut_lamports()? += protocol_fee;
-
-        Ok(())
-    }
-
-    pub fn claim_refund(ctx: Context<ClaimRefund>) -> Result<()> {
-        let escrow = &mut ctx.accounts.escrow_account;
-        let clock = Clock::get()?;
-
-        require!(
-            clock.unix_timestamp > escrow.deadline,
-            AgentPayError::DeadlineNotReached
-        );
-        require!(
-            escrow.status == EscrowStatus::Funded,
-            AgentPayError::InvalidStatus
-        );
-
-        let total = escrow.amount
-            .checked_add(escrow.protocol_fee)
-            .ok_or(AgentPayError::MathOverflow)?;
-
-        escrow.status = EscrowStatus::Refunded;
-
-        let escrow_info = ctx.accounts.escrow_account.to_account_info();
-        let orchestrator_info = ctx.accounts.orchestrator.to_account_info();
-
-        **escrow_info.try_borrow_mut_lamports()? -= total;
-        **orchestrator_info.try_borrow_mut_lamports()? += total;
-
-        Ok(())
-    }
-
-    // ============================================================
-    // JOB CONTRACT
-    // ============================================================
-
-    pub fn post_job(
-        ctx: Context<PostJob>,
-        job_id: String,
-        title: String,
-        description: String,
-        required_skills: Vec<String>,
-        expected_output: String,
-        deadline_seconds: i64,
-    ) -> Result<()> {
-        require!(job_id.len() <= 32, AgentPayError::JobIdTooLong);
-        require!(title.len() <= 100, AgentPayError::TitleTooLong);
-        require!(description.len() <= 500, AgentPayError::DescriptionTooLong);
-        require!(required_skills.len() <= 10, AgentPayError::TooManySkills);
-        require!(expected_output.len() <= 200, AgentPayError::DescriptionTooLong);
-        require!(deadline_seconds > 0, AgentPayError::InvalidDeadline);
-
-        let job = &mut ctx.accounts.job_account;
-        let clock = Clock::get()?;
-
-        job.job_id = job_id;
-        job.orchestrator = ctx.accounts.orchestrator.key();
-        job.worker = None;
-        job.title = title;
-        job.description = description;
-        job.required_skills = required_skills;
-        job.expected_output = expected_output;
-        job.status = JobStatus::Open;
-        job.result_cid = None;
-        job.created_at = clock.unix_timestamp;
-        job.deadline = clock.unix_timestamp + deadline_seconds;
-        job.bump = ctx.bumps.job_account;
-
-        Ok(())
-    }
-
-    pub fn claim_job(ctx: Context<ClaimJob>) -> Result<()> {
-        let job = &mut ctx.accounts.job_account;
-        let clock = Clock::get()?;
-
-        require!(job.status == JobStatus::Open, AgentPayError::JobNotOpen);
-        require!(
-            clock.unix_timestamp < job.deadline,
-            AgentPayError::JobExpired
-        );
-
-        job.worker = Some(ctx.accounts.worker.key());
-        job.status = JobStatus::InProgress;
-
-        Ok(())
-    }
-
-    pub fn submit_result(
-        ctx: Context<WorkerAction>,
-        result_cid: String,
-    ) -> Result<()> {
-        require!(result_cid.len() <= 100, AgentPayError::CidTooLong);
-
-        let job = &mut ctx.accounts.job_account;
-        let clock = Clock::get()?;
-
-        require!(
-            job.status == JobStatus::InProgress,
-            AgentPayError::InvalidStatus
-        );
-        require!(
-            clock.unix_timestamp <= job.deadline,
-            AgentPayError::JobExpired
-        );
-
-        job.result_cid = Some(result_cid);
-        job.status = JobStatus::PendingReview;
-
-        Ok(())
-    }
-
-    pub fn approve_job(ctx: Context<OrchestratorJobAction>) -> Result<()> {
-        let job = &mut ctx.accounts.job_account;
-
-        require!(
-            job.status == JobStatus::PendingReview,
-            AgentPayError::InvalidStatus
-        );
-
-        job.status = JobStatus::Completed;
-
-        Ok(())
-    }
-
-    pub fn cancel_job(ctx: Context<OrchestratorJobAction>) -> Result<()> {
-        let job = &mut ctx.accounts.job_account;
-
-        require!(
-            job.status == JobStatus::Open,
-            AgentPayError::InvalidStatus
-        );
-
-        job.status = JobStatus::Cancelled;
-
+        let agent = &mut ctx.accounts.agent_account;
+        agent.is_active = true;
+        agent.updated_at = Clock::get()?.unix_timestamp;
         Ok(())
     }
 }
 
-// ============================================================
-// AGENT REGISTRY — ACCOUNTS & STRUCTS
-// ============================================================
+// =============================================================================
+// ACCOUNT STRUCTS
+// =============================================================================
 
+/// Data yang disimpan on-chain untuk setiap agent terdaftar.
+/// Ukuran dihitung manual di bawah untuk space allocation.
 #[account]
 pub struct AgentAccount {
+    /// Wallet address pemilik agent (32 bytes)
     pub owner: Pubkey,
+    /// Nama agent, max 50 karakter
     pub name: String,
+    /// Deskripsi kemampuan agent, max 200 karakter
     pub description: String,
+    /// List skill tags, max 10 item (misal: ["code", "research", "analysis"])
     pub skills: Vec<String>,
+    /// Harga per job dalam lamports (1 SOL = 1_000_000_000 lamports)
     pub price_per_job: u64,
+    /// URL endpoint agent untuk menerima job request
     pub endpoint_url: String,
+    /// Status ketersediaan agent
     pub is_active: bool,
+    /// Counter total job yang sudah diselesaikan
     pub jobs_completed: u64,
+    /// Unix timestamp saat agent pertama didaftarkan
     pub created_at: i64,
+    /// Unix timestamp update terakhir
+    pub updated_at: i64,
+    /// PDA bump seed
     pub bump: u8,
 }
 
 impl AgentAccount {
+    /// Kalkulasi space yang dibutuhkan untuk account ini.
+    /// Anchor butuh ini supaya tahu berapa SOL yang perlu di-lock sebagai rent.
+    ///
+    /// Formula: 8 (discriminator) + size setiap field
     pub const MAX_SIZE: usize =
-        8 + 32 + (4 + 50) + (4 + 200) + (4 + (10 * (4 + 20))) + 8 + (4 + 100) + 1 + 8 + 8 + 1;
+        8          // discriminator Anchor
+        + 32       // owner: Pubkey
+        + 4 + 50   // name: String prefix (4) + max chars (50)
+        + 4 + 200  // description: String prefix (4) + max chars (200)
+        + 4 + (10 * (4 + 20)) // skills: Vec prefix + 10 strings masing-masing max 20 char
+        + 8        // price_per_job: u64
+        + 4 + 100  // endpoint_url: String prefix (4) + max chars (100)
+        + 1        // is_active: bool
+        + 8        // jobs_completed: u64
+        + 8        // created_at: i64
+        + 8        // updated_at: i64
+        + 1;       // bump: u8
 }
+
+// =============================================================================
+// CONTEXT STRUCTS (instruksi apa yang butuh account apa)
+// =============================================================================
 
 #[derive(Accounts)]
 #[instruction(name: String)]
 pub struct RegisterAgent<'info> {
+    /// Account baru yang akan menyimpan data agent.
+    /// PDA di-derive dari ["agent", owner pubkey, nama agent].
+    /// Ini memastikan satu owner bisa punya banyak agent dengan nama berbeda.
     #[account(
         init,
         payer = owner,
@@ -324,13 +172,19 @@ pub struct RegisterAgent<'info> {
         bump
     )]
     pub agent_account: Account<'info, AgentAccount>,
+
+    /// Wallet yang mendaftarkan dan membiayai pembuatan account.
     #[account(mut)]
     pub owner: Signer<'info>,
+
+    /// Selalu dibutuhkan saat membuat account baru.
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct UpdateAgent<'info> {
+    /// Account agent yang ingin diupdate.
+    /// Constraint has_one memastikan hanya owner yang bisa update.
     #[account(
         mut,
         has_one = owner,
@@ -338,221 +192,38 @@ pub struct UpdateAgent<'info> {
         bump = agent_account.bump
     )]
     pub agent_account: Account<'info, AgentAccount>,
+
+    /// Harus menandatangani transaksi — bukti bahwa memang owner yang update.
     pub owner: Signer<'info>,
 }
 
-// ============================================================
-// ESCROW — ACCOUNTS & STRUCTS
-// ============================================================
+// =============================================================================
+// EVENTS (untuk indexing dan off-chain listeners)
+// =============================================================================
 
-#[account]
-pub struct EscrowAccount {
-    pub orchestrator: Pubkey,
-    pub worker: Pubkey,
-    pub job_id: String,
-    pub job_description: String,
-    pub amount: u64,
-    pub protocol_fee: u64,
-    pub status: EscrowStatus,
-    pub created_at: i64,
-    pub deadline: i64,
-    pub bump: u8,
+/// Event yang di-emit setiap kali agent baru mendaftar.
+/// Off-chain indexer bisa listen event ini untuk update UI secara realtime.
+#[event]
+pub struct AgentRegistered {
+    pub owner: Pubkey,
+    pub name: String,
+    pub price_per_job: u64,
 }
 
-impl EscrowAccount {
-    pub const MAX_SIZE: usize =
-        8 + 32 + 32 + (4 + 32) + (4 + 200) + 8 + 8 + 1 + 8 + 8 + 1;
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum EscrowStatus {
-    Funded,
-    Completed,
-    Refunded,
-}
-
-#[derive(Accounts)]
-#[instruction(job_id: String)]
-pub struct CreateEscrow<'info> {
-    #[account(
-        init,
-        payer = orchestrator,
-        space = EscrowAccount::MAX_SIZE,
-        seeds = [b"escrow", orchestrator.key().as_ref(), job_id.as_bytes()],
-        bump
-    )]
-    pub escrow_account: Account<'info, EscrowAccount>,
-    #[account(mut)]
-    pub orchestrator: Signer<'info>,
-    /// CHECK: worker wallet address
-    pub worker: AccountInfo<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct OrchestratorAction<'info> {
-    #[account(
-        mut,
-        has_one = orchestrator,
-        seeds = [b"escrow", orchestrator.key().as_ref(), escrow_account.job_id.as_bytes()],
-        bump = escrow_account.bump
-    )]
-    pub escrow_account: Account<'info, EscrowAccount>,
-    /// CHECK: worker wallet
-    #[account(mut, address = escrow_account.worker)]
-    pub worker: AccountInfo<'info>,
-    #[account(mut)]
-    pub orchestrator: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct ClaimRefund<'info> {
-    #[account(
-        mut,
-        has_one = orchestrator,
-        seeds = [b"escrow", orchestrator.key().as_ref(), escrow_account.job_id.as_bytes()],
-        bump = escrow_account.bump
-    )]
-    pub escrow_account: Account<'info, EscrowAccount>,
-    #[account(mut)]
-    pub orchestrator: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-// ============================================================
-// JOB CONTRACT — ACCOUNTS & STRUCTS
-// ============================================================
-
-#[account]
-pub struct JobAccount {
-    pub job_id: String,
-    pub orchestrator: Pubkey,
-    pub worker: Option<Pubkey>,
-    pub title: String,
-    pub description: String,
-    pub required_skills: Vec<String>,
-    pub expected_output: String,
-    pub status: JobStatus,
-    pub result_cid: Option<String>,
-    pub created_at: i64,
-    pub deadline: i64,
-    pub bump: u8,
-}
-
-impl JobAccount {
-    pub const MAX_SIZE: usize =
-        8
-        + (4 + 32)
-        + 32
-        + (1 + 32)
-        + (4 + 100)
-        + (4 + 500)
-        + (4 + (10 * (4 + 20)))
-        + (4 + 200)
-        + 1
-        + (1 + (4 + 100))
-        + 8
-        + 8
-        + 1;
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum JobStatus {
-    Open,
-    InProgress,
-    PendingReview,
-    Completed,
-    Cancelled,
-}
-
-#[derive(Accounts)]
-#[instruction(job_id: String)]
-pub struct PostJob<'info> {
-    #[account(
-        init,
-        payer = orchestrator,
-        space = JobAccount::MAX_SIZE,
-        seeds = [b"job", orchestrator.key().as_ref(), job_id.as_bytes()],
-        bump
-    )]
-    pub job_account: Account<'info, JobAccount>,
-    #[account(mut)]
-    pub orchestrator: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct ClaimJob<'info> {
-    #[account(
-        mut,
-        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
-        bump = job_account.bump
-    )]
-    pub job_account: Account<'info, JobAccount>,
-    pub worker: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct WorkerAction<'info> {
-    #[account(
-        mut,
-        constraint = job_account.worker == Some(worker.key()) @ AgentPayError::NotAssignedWorker,
-        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
-        bump = job_account.bump
-    )]
-    pub job_account: Account<'info, JobAccount>,
-    pub worker: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct OrchestratorJobAction<'info> {
-    #[account(
-        mut,
-        has_one = orchestrator,
-        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
-        bump = job_account.bump
-    )]
-    pub job_account: Account<'info, JobAccount>,
-    pub orchestrator: Signer<'info>,
-}
-
-// ============================================================
+// =============================================================================
 // ERROR CODES
-// ============================================================
+// =============================================================================
 
 #[error_code]
 pub enum AgentPayError {
     #[msg("Nama agent tidak boleh lebih dari 50 karakter")]
     NameTooLong,
-    #[msg("Deskripsi tidak boleh lebih dari 200 karakter atau 500 karakter")]
+    #[msg("Deskripsi tidak boleh lebih dari 200 karakter")]
     DescriptionTooLong,
-    #[msg("Maksimal 10 skill")]
+    #[msg("Maksimal 10 skill per agent")]
     TooManySkills,
-    #[msg("URL tidak boleh lebih dari 100 karakter")]
+    #[msg("URL endpoint tidak boleh lebih dari 100 karakter")]
     UrlTooLong,
-    #[msg("Harga harus lebih dari 0")]
+    #[msg("Harga harus lebih dari 0 lamports")]
     PriceMustBePositive,
-    #[msg("Job ID tidak boleh lebih dari 32 karakter")]
-    JobIdTooLong,
-    #[msg("Judul tidak boleh lebih dari 100 karakter")]
-    TitleTooLong,
-    #[msg("Jumlah harus lebih dari 0")]
-    AmountMustBePositive,
-    #[msg("Status tidak valid untuk operasi ini")]
-    InvalidStatus,
-    #[msg("Deadline belum tercapai")]
-    DeadlineNotReached,
-    #[msg("Deadline harus lebih dari 0")]
-    InvalidDeadline,
-    #[msg("Job sudah tidak Open")]
-    JobNotOpen,
-    #[msg("Job sudah expired")]
-    JobExpired,
-    #[msg("CID tidak boleh lebih dari 100 karakter")]
-    CidTooLong,
-    #[msg("Bukan worker yang di-assign")]
-    NotAssignedWorker,
-    #[msg("Kalkulasi overflow")]
-    MathOverflow,
 }
