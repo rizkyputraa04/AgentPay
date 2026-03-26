@@ -183,6 +183,111 @@ pub mod agentpay_contracts {
 
         Ok(())
     }
+
+    // ============================================================
+    // JOB CONTRACT
+    // ============================================================
+
+    pub fn post_job(
+        ctx: Context<PostJob>,
+        job_id: String,
+        title: String,
+        description: String,
+        required_skills: Vec<String>,
+        expected_output: String,
+        deadline_seconds: i64,
+    ) -> Result<()> {
+        require!(job_id.len() <= 32, AgentPayError::JobIdTooLong);
+        require!(title.len() <= 100, AgentPayError::TitleTooLong);
+        require!(description.len() <= 500, AgentPayError::DescriptionTooLong);
+        require!(required_skills.len() <= 10, AgentPayError::TooManySkills);
+        require!(expected_output.len() <= 200, AgentPayError::DescriptionTooLong);
+        require!(deadline_seconds > 0, AgentPayError::InvalidDeadline);
+
+        let job = &mut ctx.accounts.job_account;
+        let clock = Clock::get()?;
+
+        job.job_id = job_id;
+        job.orchestrator = ctx.accounts.orchestrator.key();
+        job.worker = None;
+        job.title = title;
+        job.description = description;
+        job.required_skills = required_skills;
+        job.expected_output = expected_output;
+        job.status = JobStatus::Open;
+        job.result_cid = None;
+        job.created_at = clock.unix_timestamp;
+        job.deadline = clock.unix_timestamp + deadline_seconds;
+        job.bump = ctx.bumps.job_account;
+
+        Ok(())
+    }
+
+    pub fn claim_job(ctx: Context<ClaimJob>) -> Result<()> {
+        let job = &mut ctx.accounts.job_account;
+        let clock = Clock::get()?;
+
+        require!(job.status == JobStatus::Open, AgentPayError::JobNotOpen);
+        require!(
+            clock.unix_timestamp < job.deadline,
+            AgentPayError::JobExpired
+        );
+
+        job.worker = Some(ctx.accounts.worker.key());
+        job.status = JobStatus::InProgress;
+
+        Ok(())
+    }
+
+    pub fn submit_result(
+        ctx: Context<WorkerAction>,
+        result_cid: String,
+    ) -> Result<()> {
+        require!(result_cid.len() <= 100, AgentPayError::CidTooLong);
+
+        let job = &mut ctx.accounts.job_account;
+        let clock = Clock::get()?;
+
+        require!(
+            job.status == JobStatus::InProgress,
+            AgentPayError::InvalidStatus
+        );
+        require!(
+            clock.unix_timestamp <= job.deadline,
+            AgentPayError::JobExpired
+        );
+
+        job.result_cid = Some(result_cid);
+        job.status = JobStatus::PendingReview;
+
+        Ok(())
+    }
+
+    pub fn approve_job(ctx: Context<OrchestratorJobAction>) -> Result<()> {
+        let job = &mut ctx.accounts.job_account;
+
+        require!(
+            job.status == JobStatus::PendingReview,
+            AgentPayError::InvalidStatus
+        );
+
+        job.status = JobStatus::Completed;
+
+        Ok(())
+    }
+
+    pub fn cancel_job(ctx: Context<OrchestratorJobAction>) -> Result<()> {
+        let job = &mut ctx.accounts.job_account;
+
+        require!(
+            job.status == JobStatus::Open,
+            AgentPayError::InvalidStatus
+        );
+
+        job.status = JobStatus::Cancelled;
+
+        Ok(())
+    }
 }
 
 // ============================================================
@@ -316,6 +421,103 @@ pub struct ClaimRefund<'info> {
 }
 
 // ============================================================
+// JOB CONTRACT — ACCOUNTS & STRUCTS
+// ============================================================
+
+#[account]
+pub struct JobAccount {
+    pub job_id: String,
+    pub orchestrator: Pubkey,
+    pub worker: Option<Pubkey>,
+    pub title: String,
+    pub description: String,
+    pub required_skills: Vec<String>,
+    pub expected_output: String,
+    pub status: JobStatus,
+    pub result_cid: Option<String>,
+    pub created_at: i64,
+    pub deadline: i64,
+    pub bump: u8,
+}
+
+impl JobAccount {
+    pub const MAX_SIZE: usize =
+        8
+        + (4 + 32)
+        + 32
+        + (1 + 32)
+        + (4 + 100)
+        + (4 + 500)
+        + (4 + (10 * (4 + 20)))
+        + (4 + 200)
+        + 1
+        + (1 + (4 + 100))
+        + 8
+        + 8
+        + 1;
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum JobStatus {
+    Open,
+    InProgress,
+    PendingReview,
+    Completed,
+    Cancelled,
+}
+
+#[derive(Accounts)]
+#[instruction(job_id: String)]
+pub struct PostJob<'info> {
+    #[account(
+        init,
+        payer = orchestrator,
+        space = JobAccount::MAX_SIZE,
+        seeds = [b"job", orchestrator.key().as_ref(), job_id.as_bytes()],
+        bump
+    )]
+    pub job_account: Account<'info, JobAccount>,
+    #[account(mut)]
+    pub orchestrator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimJob<'info> {
+    #[account(
+        mut,
+        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
+        bump = job_account.bump
+    )]
+    pub job_account: Account<'info, JobAccount>,
+    pub worker: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct WorkerAction<'info> {
+    #[account(
+        mut,
+        constraint = job_account.worker == Some(worker.key()) @ AgentPayError::NotAssignedWorker,
+        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
+        bump = job_account.bump
+    )]
+    pub job_account: Account<'info, JobAccount>,
+    pub worker: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct OrchestratorJobAction<'info> {
+    #[account(
+        mut,
+        has_one = orchestrator,
+        seeds = [b"job", job_account.orchestrator.as_ref(), job_account.job_id.as_bytes()],
+        bump = job_account.bump
+    )]
+    pub job_account: Account<'info, JobAccount>,
+    pub orchestrator: Signer<'info>,
+}
+
+// ============================================================
 // ERROR CODES
 // ============================================================
 
@@ -323,9 +525,9 @@ pub struct ClaimRefund<'info> {
 pub enum AgentPayError {
     #[msg("Nama agent tidak boleh lebih dari 50 karakter")]
     NameTooLong,
-    #[msg("Deskripsi tidak boleh lebih dari 200 karakter")]
+    #[msg("Deskripsi tidak boleh lebih dari 200 karakter atau 500 karakter")]
     DescriptionTooLong,
-    #[msg("Maksimal 10 skill per agent")]
+    #[msg("Maksimal 10 skill")]
     TooManySkills,
     #[msg("URL tidak boleh lebih dari 100 karakter")]
     UrlTooLong,
@@ -333,12 +535,24 @@ pub enum AgentPayError {
     PriceMustBePositive,
     #[msg("Job ID tidak boleh lebih dari 32 karakter")]
     JobIdTooLong,
+    #[msg("Judul tidak boleh lebih dari 100 karakter")]
+    TitleTooLong,
     #[msg("Jumlah harus lebih dari 0")]
     AmountMustBePositive,
     #[msg("Status tidak valid untuk operasi ini")]
     InvalidStatus,
     #[msg("Deadline belum tercapai")]
     DeadlineNotReached,
+    #[msg("Deadline harus lebih dari 0")]
+    InvalidDeadline,
+    #[msg("Job sudah tidak Open")]
+    JobNotOpen,
+    #[msg("Job sudah expired")]
+    JobExpired,
+    #[msg("CID tidak boleh lebih dari 100 karakter")]
+    CidTooLong,
+    #[msg("Bukan worker yang di-assign")]
+    NotAssignedWorker,
     #[msg("Kalkulasi overflow")]
     MathOverflow,
 }
