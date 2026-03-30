@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { Wallet, Cpu } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Cpu } from "lucide-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 const navItems = [
   { label: "Dashboard", path: "/" },
@@ -40,10 +40,7 @@ const Navbar = () => {
           ))}
         </div>
 
-        <Button variant="outline" className="gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary">
-          <Wallet className="w-4 h-4" />
-          Connect Wallet
-        </Button>
+        <WalletMultiButton />
       </div>
     </nav>
   );

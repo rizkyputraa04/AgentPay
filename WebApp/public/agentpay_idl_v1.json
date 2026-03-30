@@ -1,0 +1,195 @@
+{
+  "version": "0.1.0",
+  "name": "agentpay_contracts",
+  "instructions": [
+    {
+      "name": "registerAgent",
+      "accounts": [
+        { "name": "agentAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "name", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "skills", "type": { "vec": "string" } },
+        { "name": "pricePerJob", "type": "u64" },
+        { "name": "endpointUrl", "type": "string" }
+      ]
+    },
+    {
+      "name": "postJob",
+      "accounts": [
+        { "name": "jobAccount", "isMut": true, "isSigner": false },
+        { "name": "orchestrator", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "jobId", "type": "string" },
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "requiredSkills", "type": { "vec": "string" } },
+        { "name": "expectedOutput", "type": "string" },
+        { "name": "deadlineSeconds", "type": "i64" }
+      ]
+    },
+    {
+      "name": "createEscrow",
+      "accounts": [
+        { "name": "escrowAccount", "isMut": true, "isSigner": false },
+        { "name": "orchestrator", "isMut": true, "isSigner": true },
+        { "name": "worker", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "jobId", "type": "string" },
+        { "name": "amount", "type": "u64" },
+        { "name": "jobDescription", "type": "string" }
+      ]
+    },
+    {
+      "name": "approveAndRelease",
+      "accounts": [
+        { "name": "escrowAccount", "isMut": true, "isSigner": false },
+        { "name": "worker", "isMut": true, "isSigner": false },
+        { "name": "orchestrator", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "deactivateAgent",
+      "accounts": [
+        { "name": "agentAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "reactivateAgent",
+      "accounts": [
+        { "name": "agentAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "claimJob",
+      "accounts": [
+        { "name": "jobAccount", "isMut": true, "isSigner": false },
+        { "name": "worker", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancelJob",
+      "accounts": [
+        { "name": "jobAccount", "isMut": true, "isSigner": false },
+        { "name": "orchestrator", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AgentAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "publicKey" },
+          { "name": "name", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "skills", "type": { "vec": "string" } },
+          { "name": "pricePerJob", "type": "u64" },
+          { "name": "endpointUrl", "type": "string" },
+          { "name": "isActive", "type": "bool" },
+          { "name": "jobsCompleted", "type": "u64" },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "EscrowAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "orchestrator", "type": "publicKey" },
+          { "name": "worker", "type": "publicKey" },
+          { "name": "jobId", "type": "string" },
+          { "name": "jobDescription", "type": "string" },
+          { "name": "amount", "type": "u64" },
+          { "name": "protocolFee", "type": "u64" },
+          { "name": "status", "type": { "defined": "EscrowStatus" } },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "deadline", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "JobAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "jobId", "type": "string" },
+          { "name": "orchestrator", "type": "publicKey" },
+          { "name": "worker", "type": { "option": "publicKey" } },
+          { "name": "title", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "requiredSkills", "type": { "vec": "string" } },
+          { "name": "expectedOutput", "type": "string" },
+          { "name": "status", "type": { "defined": "JobStatus" } },
+          { "name": "resultCid", "type": { "option": "string" } },
+          { "name": "createdAt", "type": "i64" },
+          { "name": "deadline", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "EscrowStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Funded" },
+          { "name": "Completed" },
+          { "name": "Refunded" }
+        ]
+      }
+    },
+    {
+      "name": "JobStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Open" },
+          { "name": "InProgress" },
+          { "name": "PendingReview" },
+          { "name": "Completed" },
+          { "name": "Cancelled" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "NameTooLong", "msg": "Nama agent tidak boleh lebih dari 50 karakter" },
+    { "code": 6001, "name": "DescriptionTooLong", "msg": "Deskripsi tidak boleh lebih dari 200 karakter" },
+    { "code": 6002, "name": "TooManySkills", "msg": "Maksimal 10 skill" },
+    { "code": 6003, "name": "UrlTooLong", "msg": "URL tidak boleh lebih dari 100 karakter" },
+    { "code": 6004, "name": "PriceMustBePositive", "msg": "Harga harus lebih dari 0" },
+    { "code": 6005, "name": "JobIdTooLong", "msg": "Job ID tidak boleh lebih dari 32 karakter" },
+    { "code": 6006, "name": "TitleTooLong", "msg": "Judul tidak boleh lebih dari 100 karakter" },
+    { "code": 6007, "name": "AmountMustBePositive", "msg": "Jumlah harus lebih dari 0" },
+    { "code": 6008, "name": "InvalidStatus", "msg": "Status tidak valid" },
+    { "code": 6009, "name": "DeadlineNotReached", "msg": "Deadline belum tercapai" },
+    { "code": 6010, "name": "InvalidDeadline", "msg": "Deadline harus lebih dari 0" },
+    { "code": 6011, "name": "JobNotOpen", "msg": "Job sudah tidak Open" },
+    { "code": 6012, "name": "JobExpired", "msg": "Job sudah expired" },
+    { "code": 6013, "name": "CidTooLong", "msg": "CID tidak boleh lebih dari 100 karakter" },
+    { "code": 6014, "name": "NotAssignedWorker", "msg": "Bukan worker yang di-assign" },
+    { "code": 6015, "name": "MathOverflow", "msg": "Kalkulasi overflow" }
+  ]
+}
