@@ -7,6 +7,7 @@ const navItems = [
   { label: "Agents", path: "/agents" },
   { label: "Jobs", path: "/jobs" },
   { label: "Hire Agent", path: "/hire" },
+  { label: "🤖 Demo", path: "/demo" },
 ];
 
 const Navbar = () => {
