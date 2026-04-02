@@ -75,7 +75,7 @@ const Demo = () => {
 
   const loadStats = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/stats");
+      const res = await fetch("https://agentpay-production-15f1.up.railway.app/api/stats");
       const data = await res.json();
       setStats(data);
     } catch {}
@@ -83,7 +83,7 @@ const Demo = () => {
 
   const loadActivity = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/activity");
+      const res = await fetch("https://agentpay-production-15f1.up.railway.app/api/activity");
       const data = await res.json();
       setActivity(data.events || []);
     } catch {}
@@ -94,7 +94,7 @@ const Demo = () => {
     setResult(null);
     setRunning(true);
 
-    const ws = new WebSocket("ws://localhost:8000/ws/demo");
+    const ws = new WebSocket("wss://agentpay-production-15f1.up.railway.app/ws/demo");
     wsRef.current = ws;
 
     ws.onopen = () => {
