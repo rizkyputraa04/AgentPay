@@ -33,9 +33,13 @@ app.add_middleware(
 )
 
 # Load wallet dan client
-wallet_path = str(Path.home() / ".config" / "solana" / "id.json")
-with open(wallet_path) as f:
-    secret = json.load(f)
+wallet_json = os.getenv("SOLANA_WALLET_JSON")
+if wallet_json:
+    secret = json.loads(wallet_json)
+else:
+    wallet_path = str(Path.home() / ".config" / "solana" / "id.json")
+    with open(wallet_path) as f:
+        secret = json.load(f)
 keypair = Keypair.from_bytes(bytes(secret))
 client = AgentPayClient(keypair)
 groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
